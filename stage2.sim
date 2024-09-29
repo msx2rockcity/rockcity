@@ -1,0 +1,657 @@
+TOP1:     EQU     0100H
+TOP2:     EQU     09F7H
+TOP3:     EQU     1032H
+STAGE3:   EQU     20DCH
+MAIN:     EQU     TOP1+0056H
+JPTUCH:   EQU     TOP1+0338H
+MOVE:     EQU     TOP1+05DEH
+RTURN:    EQU     TOP1+0603H
+DSET:     EQU     TOP1+064BH
+CLSPRI:   EQU     TOP1+068FH
+UNFADE:   EQU     TOP1+070AH
+FADE:     EQU     TOP1+072FH
+SCROLL:   EQU     TOP1+07D2H
+SWHICH:   EQU     TOP1+07D6H
+CONTRT:   EQU     TOP1+07D7H
+STOCK:    EQU     TOP1+07DCH
+SCORE:    EQU     TOP1+07DDH
+MASTER:   EQU     TOP1+07E7H
+PORIDAT:  EQU     TOP1+07F7H
+MHYOUJ:   EQU     TOP2+0000H
+DEAD:     EQU     TOP3+004CH
+TUCH0:    EQU     TOP3+00A3H
+TUCH1:    EQU     TOP3+00A4H
+TUCH2:    EQU     TOP3+00B9H
+TUCH3:    EQU     TOP3+00D5H
+TUCH4:    EQU     TOP3+00EBH
+MSSTR:    EQU     TOP3+00FBH
+TURBO:    EQU     TOP3+0167H
+CURE:     EQU     TOP3+01CFH
+TECHNO:   EQU     TOP3+029FH
+TUCH5:    EQU     TOP3+02E3H
+PARTY:    EQU     TOP3+035BH
+TUCH6:    EQU     TOP3+039CH
+RND:      EQU     TOP3+03BDH
+HOME:     EQU     TOP3+03CDH
+          ORG     1A61H
+;
+;---- STAGE2 PROGRAM ----
+;
+STAGE2:   CALL    CLSPRI
+          LD      A,00001000B
+          LD      (SWHICH),A
+          CALL    DSET
+          DEFW    STAGM1,MHYOUJ
+          DEFB    12,40,0,0,0,44
+          DEFB    0,0,00010101B
+          CALL    DSET
+          DEFW    STAGM2,MHYOUJ
+          DEFB    12,40,0,0,0,26
+          DEFB    50,0,00000101B
+          CALL    UNFADE
+          LD      A,32
+          CALL    MAIN
+          CALL    FADE
+          LD      A,8
+          CALL    MAIN
+          CALL    MSSTR
+          ;
+CONT:     LD      HL,STAGD1
+          LD      DE,SCROLL
+          LD      BC,9
+          LDIR
+          LD      HL,JPDAT1
+          LD      DE,JPTUCH
+          LD      BC,32
+          LDIR
+          LD      A,24
+          CALL    MAIN
+        ; JP      BOSS
+          LD      B,128
+LOOP:     LD      HL,RETLOP
+          PUSH    HL
+          CALL    TURBO
+          CALL    CURE
+          LD      A,B
+          CP      64
+          JP      Z,CHARA2
+          JR      C,J1
+          CALL    RND
+          CP      100
+          JP      C,CHARA3
+          CP      150
+          JP      C,CHARA6
+          CP      180
+          JP      C,TECHNO
+          CP      215
+          JP      C,PARTY
+          RET
+          ;
+J1:       CP      48
+          RET     NC
+          CP      40
+          JP      NC,CHARA4
+          CP      32
+          JP      NC,CHARA5
+          CP      28
+          RET     NC
+          CP      20
+          JP      Z,CHARA2
+          JP      NC,CHARA1
+          POP     HL
+          ;
+RETLOP:   CALL    RND
+          AND     3
+          ADD     A,2
+          CALL    MAIN
+          DJNZ    LOOP
+          ;
+          LD      A,(SWHICH)
+          AND     11111110B
+          LD      (SWHICH),A
+          LD      HL,CONT2
+          LD      (CONTRT),HL
+CONT2:    LD      A,24
+          CALL    MAIN
+          LD      B,192
+LOOP2:    CALL    TURBO
+          CALL    CURE
+          LD      HL,RETLP3
+          PUSH    HL
+          CALL    RND
+          CP      80
+          JP      C,CHARA3
+          CP      110
+          JP      C,CHARA6
+          CP      135
+          JP      C,CHARA4
+          CP      145
+          JP      C,CHARA5
+          CP      155
+          JP      C,CHARA1
+          CP      190
+          JP      C,TECHNO
+          CP      220
+          JP      C,PARTY
+          POP     HL
+RETLP3:   LD      A,B
+          RLCA
+          RLCA
+          AND     3
+          ADD     A,2
+          CALL    MAIN
+          DJNZ    LOOP2
+          LD      A,32
+          CALL    MAIN
+          JP      BOSS
+;
+; STAGE2 DATA
+;
+STAGD1:   DEFB    32,5,12,2
+          DEFB    01011011B
+          DEFW    CONT,DEAD
+          ;
+JPDAT1:   DEFW    TUCH0,TUCH1
+          DEFW    TUCH2,TUCH3
+          DEFW    TUCH4,TUCH5
+          DEFW    TUCH6,TUCH6
+          DEFW    TUCH7,TUCH8
+          DEFW    TUCH0,TUCH0
+          DEFW    TUCH0,TUCH0
+          DEFW    TUCH0,TUCH0
+          ;
+STAGM1:   DEFB    'Z',60,80
+          DEFB    'O',75,80
+          DEFB    'N',90,80
+          DEFB    'E',105,80
+          DEFB    '2',120,80,0
+STAGM2:   DEFB    'F',30,80
+          DEFB    'O',60,80
+          DEFB    'R',90,80
+          DEFB    'E',120,80
+          DEFB    'S',150,80
+          DEFB    'T',180,80,0
+;
+; STAGE 2 -- CHARACTER 1
+;
+CHARA1:   CALL    RND
+          AND     127
+          ADD     A,90
+          LD      (CHARD1+4),A
+          CALL    DSET
+CHARD1:   DEFW    CHPD11,CHARP1
+          DEFB    0,225,245,0,0,0
+          DEFB    13,1,00000000B
+          RET
+          ;
+CHPD11:   DEFB    6,0
+          DEFB      0,  0,-20
+          DEFB    -30,-10,-10
+          DEFB     30,-10,-10
+          DEFB      0,  0, 40
+          DEFB    -10,-16,-20
+          DEFB     10,-16,-20
+          DEFB    1,2,4,3,1,4,0,5,1,6,0,0
+          ;
+CHPD12:   DEFB    6,0
+          DEFB      0,  0,-20
+          DEFB    -20, 20,-10
+          DEFB     20, 20,-10
+          DEFB      0,  0, 40
+          DEFB    -10,-16,-20
+          DEFB     10,-16,-20
+          DEFB    1,2,4,3,1,4,0,5,1,6,0,0
+          ;
+HABATA:   LD      A,(IX+1)
+          INC     (IX+1)
+          LD      C,A
+          LD      HL,CHPD11
+          AND     2
+          JR      Z,$+5
+          LD      HL,CHPD12
+          LD      (IX+3),L
+          LD      (IX+4),H
+          LD      A,C
+          RET
+          ;
+CHARP1:   CALL    HABATA
+          CP      8
+          JR      NC,$+11
+          LD      A,(IX+9)
+          SUB     16
+          LD      (IX+9),A
+          RET
+          CP      40
+          JR      NC,$+20
+          CALL    RTURN
+          DEFB    128,128,128,0,2,0
+          CALL    MOVE
+          DEFB    -2,0,0,0,2,0
+          LD      A,(IX+9)
+          SUB     16
+          LD      (IX+9),A
+          RET
+;
+; STAGE 2 -- CHARACTER 2
+;
+CHARA2:   CALL    RND
+          AND     31
+          ADD     A,112
+          LD      (CHARD2+4),A
+          LD      (CHAR22+4),A
+          CALL    DSET
+CHARD2:   DEFW    CHAPD2,CHARP2
+          DEFB    128,128,245,0,0,0
+          DEFB    12,2,00000010B
+          CALL    DSET
+CHAR22:   DEFW    CHAPD2,CHARP2
+          DEFB    128,128,245,8,0,0
+          DEFB    12,2,00000010B
+          RET
+          ;
+CHAPD2:   DEFB    11,3
+          DEFB     -8,-50, -8
+          DEFB     -8,-50,  8
+          DEFB      8,-50,  8
+          DEFB      8,-50, -8
+          DEFB     -8, 50, -8
+          DEFB     -8, 50,  8
+          DEFB      8, 50,  8
+          DEFB      8, 50, -8
+          DEFB      0, 24,  0
+          DEFB      0,-24,  0
+          DEFB      0,  0,  0
+          DEFB    1,2,3,4,1,5,6
+          DEFB    7,8,5,0,4,8,0
+          DEFB    3,7,0,2,6,0,0
+          ;
+CHARP2:   LD      A,(IX+13)
+          XOR     15
+          LD      (IX+13),A
+          LD      A,(IX+1)
+          INC    (IX+1)
+          CP      8
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,0,-24,2,0,0
+          CP      40
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,0,0,1,-2,-1
+          CP      72
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,0,0,2,1,2
+          CALL    MOVE
+          DEFB    0,0,-8,2,0,0
+;
+; STAGE 2 -- CHARACTER 3
+;
+CHARA3:   CALL    RND
+          CP      200
+          JR      NC,$-5
+          ADD     A,25
+          LD      (CHARD3+4),A
+          LD      HL,CHRP31
+          CALL    RND
+          AND     00010100B
+          JR      Z,$+5
+          LD      HL,CHRP32
+          LD      (CHARD3+2),HL
+          CALL    DSET
+CHARD3:   DEFW    CHAPD3,CHRP31
+          DEFB    128,225,255
+          DEFB    0,0,0,12,2,00000000B
+          RET
+          ;
+CHRP32:   LD      A,(IX+9)
+          SUB     24
+          LD      (IX+9),A
+          RET
+          ;
+CHRP31:   LD      A,(IX+1)
+          CP      1
+          JR      Z,CJ5
+          LD      A,(IX+9)
+          SUB     24
+          LD      (IX+9),A
+          LD      C,A
+          LD      A,(MASTER+9)
+          NEG
+          ADD     A,C
+          CP      60
+          RET     NC
+          LD      A,1
+          LD      (IX+1),1
+          RET
+CJ5:      LD      A,(IX+9)
+          SUB     16
+          LD      (IX+9),A
+          LD      A,(IX+7)
+          CP      128
+          LD      A,(IX+10)
+          JR      NC,CJ52
+          CP      8
+          RET     NC
+          ADD     A,2
+          LD      (IX+10),A
+          RET
+CJ52:     SUB     2
+          AND     31
+          CP      24
+          RET     C
+          LD      (IX+10),A
+          RET
+          ;
+CHAPD3:   DEFB    10,0
+          DEFB      0,-127, 0
+          DEFB    -17,  0, 17
+          DEFB     -7,  0,-23
+          DEFB     23,  0,  7
+          DEFB    -11,-43,  0
+          DEFB     -5,-43,  0
+          DEFB     16,-43,  0
+          DEFB     -8,-86,  0
+          DEFB     -2,-86,  0
+          DEFB      8,-86,  0
+          DEFB    1,2,3,1,4,2,0,4,3,0,0
+;
+; STAGE 2 -- BOSS
+;
+BOSS:     CALL    DSET
+          DEFW    ATACKM,MHYOUJ
+          DEFB    9,16,1,1,0
+          DEFB    72,80,0,00100101B
+          LD      A,17
+          CALL    MAIN
+          CALL    CLSPRI
+          CALL    DSET
+          DEFW    COREPT,BOSMV2
+          DEFB    128,56,64
+          DEFB    0,0,0,9,9,00000000B
+          CALL    DSET
+          DEFW    CHPD11,BOSMV3
+          DEFB    128,32,64
+          DEFB    0,0,0,9,8,00000010B
+          LD      HL,4005H
+          CALL    BOSS2
+          LD      A,8
+          CALL    MAIN
+          LD      HL,0C00DH
+          CALL    BOSS2
+          LD      A,8
+          CALL    MAIN
+          LD      HL,800BH
+          CALL    BOSS2
+LOOP8:    LD      A,1
+          CALL    MAIN
+          LD      A,(PORIDAT)
+          OR      A
+          JR      NZ,LOOP8
+          LD      HL,HOME
+          LD      (MASTER+5),HL
+LOOP9:    LD      A,1
+          CALL    MAIN
+          LD      A,(MASTER+1)
+          OR      A
+          JR      NZ,LOOP9
+          ;
+          CALL    DSET
+          DEFW    STAGM1,MHYOUJ
+          DEFB    2,24,0,0,0,38,8
+          DEFB    0,00000101B
+          CALL    DSET
+          DEFW    CLEARM,MHYOUJ
+          DEFB    2,24,0,0,0,38,134
+          DEFB    0,00000101B
+          LD      A,28
+          CALL    MAIN
+          CALL    DSET
+          DEFW    BONUSM,MHYOUJ
+          DEFB    2,24,0,0,0,0,55
+          DEFB    0,00000101B
+          CALL    DSET
+          DEFW    SCOREM,MHYOUJ
+          DEFB    2,24,0,0,0,8,80
+          DEFB    0,00010101B
+          LD      HL,(SCORE)
+          LD      DE,2000
+          ADD     HL,DE
+          JR      NC,$+5
+          LD      HL,65535
+          LD      (SCORE),HL
+          LD      A,(STOCK)
+          INC     A
+          CP      10
+          JR      C,$+4
+          LD      A,9
+          LD      (STOCK),A
+          LD      A,30
+          CALL    MAIN
+          CALL    FADE
+          LD      A,24
+          CALL    MAIN
+          JP      STAGE3
+          ;
+TUCH7:    CALL    TUCH2
+          LD      A,(MASTER+9)
+          XOR     127
+          ADD     A,17
+          LD      (MASTER+9),A
+          RET
+          ;
+TUCH8:    LD      A,32
+          LD      (MASTER+8),A
+          LD      A,(IX+13)
+          CP      9
+          JR      NZ,$+8
+          LD      A,8
+          LD      (IX+13),A
+          RET
+          CP      8
+          JR      NZ,$+8
+          LD      A,6
+          LD      (IX+13),A
+          RET
+          XOR     A
+          LD      (IX+0),A
+          RET
+          ;
+COREPT:   DEFB    6,0
+          DEFB      0,-24,  0
+          DEFB      0, 24,  0
+          DEFB      0,  0,-13
+          DEFB    -13,  0,  0
+          DEFB      0,  0, 13
+          DEFB     13,  0,  0
+          DEFB    1,4,2,6,1,0,5,4,3,6,5,0
+          DEFB    1,3,2,5,1,0,0
+          ;
+ATACKM:  DEFB    'A',9,0,  'T',32,0,  'A',55,0,  'C',79,0,  'K',106,0,0
+CLEARM:  DEFB    'C',60,30,'L',75,30, 'E',90,30, 'A',105,30,'R',120,30,0
+BONUSM:  DEFB    'B',88,30,'O',108,30,'N',128,30,'U',148,30,'S',168,30,0
+SCOREM:  DEFB    '2',98,60,'0',113,60,'0',128,60,'0',142,60
+         DEFB    '1',98,90,'U',113,90,'P',128,90,0
+;
+; STAGE 2 -- CHARACTER 5
+;
+CHARA5:   CALL    RND
+          LD      (CHARD5+4),A
+          CALL    DSET
+CHARD5:   DEFW    CHPD11,CHARP5
+          DEFB    0,215,245,0,0,0
+          DEFB    5,1,00000000B
+          RET
+          ;
+CHARP5:   CALL    HABATA
+          CP      4
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,-22,-8,0,2,0
+          CP      8
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,-22,-8,0,-2,0
+          CP      12
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,22,-8,0,-2,0
+          CP      16
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,22,-8,0,2,0
+          XOR     A
+          LD      (IX+1),A
+          JR      CHARP5
+;
+; STAGE 2 -- CHARACTER 4
+;
+CHARP4:   CALL    HABATA
+          CALL    RTURN
+          DEFB    128,128,128,2,0,0
+          CALL    MOVE
+          DEFB    0,0,-8,2,0,0
+          ;
+CHARA4:   CALL    RND
+          AND     127
+          ADD     A,64
+          LD      (CHARD4+4),A
+          CALL    RND
+          AND     31
+          ADD     A,180
+          LD      (CHARD4+5),A
+          CALL    DSET
+CHARD4:   DEFW    CHPD11,CHARP4
+          DEFB    0,0,240,0,0,0
+          DEFB    11,1,00000000B
+          RET
+;
+; STAGE 2 -- CHARACTER 6
+;
+CHARA6:   CALL    RND
+          CP      190
+          JR      NC,$-5
+          ADD     A,35
+          LD      (CHARD6+4),A
+          CALL    RND
+          CP      190
+          JR      NC,$-5
+          ADD     A,25
+          LD      (CHARD6+5),A
+          CALL    DSET
+CHARD6:   DEFW    CHPD11,CHARP6
+          DEFB    0,0,255,0,0,0
+          DEFB    9,1,00000000B
+          RET
+          ;
+CHARP6:   CALL    HABATA
+          LD      A,(IX+9)
+          SUB     24
+          LD      (IX+9),A
+          RET
+;
+; STAGE 2 -- BOSS
+;
+BOSS2:    LD      A,H
+          LD      (BOSRD2+5),A
+          LD      A,L
+          LD      (BOSRD2+10),A
+          CALL    DSET
+BOSRD2:   DEFW    CHPD11,BOSMV
+          DEFB    192,128,102,0,0,0
+          DEFB    7,8,00000000B
+          RET
+          ;
+BOSMV:    LD      A,(PORIDAT)
+          OR      A
+          JR      NZ,$+6
+          LD      (IX+0),A
+          RET
+          CALL    RND
+          AND     31
+          CALL    Z,FUN
+          CALL    HABATA
+          CP      4
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,0,-18,0,0,-2
+          CP      12
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    -18,0,0,0,0,-1
+          CP      16
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,0,18,0,0,-2
+          CP      24
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    18,0,0,0,0,-1
+          XOR     A
+          LD      (IX+1),A
+          JR      BOSMV
+          ;
+BOSMV2:   LD      A,(IX+1)
+          INC     (IX+1)
+          CP      16
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,8,0,0,0,1
+          CP      32
+          JR      NC,$+11
+          CALL    MOVE
+          DEFB    0,-8,0,0,0,1
+          XOR     A
+          LD      (IX+1),A
+          JR      BOSMV2
+          ;
+BOSMV3:   LD      A,(PORIDAT)
+          OR      A
+          JR      NZ,$+6
+          LD      (IX+0),A
+          RET
+          CALL    HABATA
+          CP      16
+          JR      NC,$+11
+          LD      A,(IX+8)
+          ADD     A,8
+          LD      (IX+8),A
+          RET
+          CP      32
+          JR      NC,$+11
+          LD      A,(IX+8)
+          SUB     8
+          LD      (IX+8),A
+          RET
+          XOR     A
+          LD      (IX+1),A
+          JR      BOSMV3
+;
+; BOSS - FUN
+;
+FUN:      LD      A,(IX+7)
+          LD      (FUNRD+4),A
+          LD      A,(IX+8)
+          LD      (FUNRD+5),A
+          LD      A,(IX+9)
+          LD      (FUNRD+6),A
+          CALL    DSET
+FUNRD:    DEFW    FUNPD,FUNMV
+          DEFB    0,0,0,0,0,0
+          DEFB    8,1,00000000B
+          RET
+          ;
+FUNMV:    LD      A,(IX+8)
+          ADD     A,16
+          LD      (IX+8),A
+          RET
+          ;
+FUNPD:    DEFB    4,0
+          DEFB     -8,  5, -5
+          DEFB      8,  5, -5
+          DEFB      0,  5,  9
+          DEFB      0, -9,  0
+          DEFB    1,2,3,1,4,2,0
+          DEFB    4,3,0,0
+          ;
+END:      EQU     $

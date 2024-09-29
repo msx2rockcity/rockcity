@@ -1,0 +1,481 @@
+CALSLT:   EQU     001CH
+GTSTCK:   EQU     00D5H
+GTTRIG:   EQU     00D8H
+EXPTBL:   EQU     0FCC1H
+TOP1:     EQU     0100H
+TOP2:     EQU     09F7H
+THEEND:   EQU     3297H
+MAIN:     EQU     TOP1+0056H
+MALEND:   EQU     TOP1+019EH
+LIDAT:    EQU     TOP1+0432H
+KEY:      EQU     TOP1+0508H
+MOVE:     EQU     TOP1+05DEH
+DSET:     EQU     TOP1+064BH
+CLSPRI:   EQU     TOP1+068FH
+UNFADE:   EQU     TOP1+070AH
+FADE:     EQU     TOP1+072FH
+STACK:    EQU     TOP1+07D0H
+SWHICH:   EQU     TOP1+07D6H
+CONTRT:   EQU     TOP1+07D7H
+LIFE:     EQU     TOP1+07DBH
+STOCK:    EQU     TOP1+07DCH
+SCORE:    EQU     TOP1+07DDH
+GAGE:     EQU     TOP1+07E1H
+MASTER:   EQU     TOP1+07E7H
+MHYOUJ:   EQU     TOP2+0000H
+MSDATA:   EQU     TOP2+04F8H
+          ORG     1032H
+;
+;---- MALTI STAGE SUB ROUTINE ----
+;
+;
+; TRIGER & STICK
+;
+STRIG:    PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          PUSH    IX
+          XOR     A
+          LD      IX,GTTRIG
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          INC     A
+          JR      Z,RETSTR
+          LD      IX,GTTRIG
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          INC     A
+RETSTR:   POP     IX
+          POP     HL
+          POP     DE
+          POP     BC
+          RET
+          ;
+STICK:    PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          PUSH    IX
+          XOR     A
+          LD      IX,GTSTCK
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          OR      A
+          JR      NZ,RETSTI
+          LD      IX,GTSTCK
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          OR      A
+RETSTI:   POP     IX
+          POP     HL
+          POP     DE
+          POP     BC
+          RET
+;
+; DEAD ROUTINE
+;
+DEAD:     LD      SP,(STACK)
+          LD      HL,DEADPT
+          LD      (MASTER+5),HL
+          LD      A,(SWHICH)
+          AND     11101111B
+          LD      (SWHICH),A
+          LD      HL,0
+          LD      (GAGE),HL
+          LD      A,45
+          CALL    MAIN
+          CALL    FADE
+          LD      A,8
+          CALL    MAIN
+          LD      A,(STOCK)
+          DEC     A
+          JP      Z,THEEND
+          LD      (STOCK),A
+          CALL    MSSTR
+          LD      HL,(CONTRT)
+          JP      (HL)
+          ;
+DEADPT:   LD      A,(IX+9)
+          ADD     A,6
+          CP      200
+          JR      NC,$+12
+          LD      (IX+9),A
+          INC     (IX+10)
+          INC     (IX+10)
+          RET
+          LD      A,00011000B
+          LD      (IX+15),A
+          LD      A,(SWHICH)
+          AND     11111001B
+          LD      (SWHICH),A
+          RET
+;
+; TUCH ROUTINE ( 0 - 4 )
+;
+TUCH0:    RET
+          ;
+TUCH1:    LD      A,(SWHICH)
+          BIT     5,A
+          RET     NZ
+          LD      A,(LIFE)
+          OR      A
+          JR      Z,$+6
+          DEC     A
+          LD      (LIFE),A
+          XOR     A
+          LD      (IX+0),A
+          RET
+          ;
+TUCH2:    XOR     A
+          LD      (IX+2),A
+          LD      A,(MASTER+13)
+          LD      (LIDAT+4),A
+          LD      A,(SWHICH)
+          BIT     5,A
+          RET     NZ
+          LD      A,(LIFE)
+          SUB     2
+          JR      NC,$+3
+          XOR     A
+          LD      (LIFE),A
+          RET
+          ;
+TUCH3:    LD      A,(LIFE)
+          ADD     A,4
+          CP      17
+          JR      C,$+4
+          LD      A,16
+          LD      (LIFE),A
+          XOR     A
+          LD      (IX+0),A
+          LD      (IX+2),A
+          RET
+          ;
+TUCH4:    LD      A,(SWHICH)
+          XOR     00000100B
+          LD      (SWHICH),A
+          XOR     A
+          LD      (IX+0),A
+          LD      (IX+2),A
+          RET
+;
+; MASTER START ROUTINE
+;
+MSSTR:    LD      HL,MSSTDT
+          LD      DE,MASTER
+          LD      BC,16
+          LDIR
+          LD      A,16
+          LD      (LIFE),A
+          LD      A,(SWHICH)
+          OR      00010010B
+          LD      (SWHICH),A
+          CALL    CLSPRI
+          CALL    DSET
+          DEFW    STARTM,MHYOUJ
+          DEFB    7,24,1,1,0,40
+          DEFB    0,0,00110101B
+          CALL    UNFADE
+          RET
+          ;
+MSSTDT:   DEFB    1,0,0
+          DEFW    MSDATA,STARPT
+          DEFB    128,128,128
+          DEFB    0,0,0,8,0
+          DEFB    00101000B
+          ;
+STARTM:   DEFB    'G',40,80
+          DEFB    'O',55,80
+          DEFB    'A',75,80
+          DEFB    'H',90,80
+          DEFB    'E',105,80
+          DEFB    'A',120,80
+          DEFB    'D',135,80,0
+          ;
+STARPT:   LD      A,(IX+9)
+          SUB     8
+          CP      16
+          JR      C,$+6
+          LD      (IX+9),A
+          RET
+          LD      HL,KEY
+          LD      (IX+5),L
+          LD      (IX+6),H
+          RET
+;
+; TURBO ROUTINE
+;
+TURBO:    LD      A,0
+          INC     A
+          LD      (TURBO+1),A
+          AND     15
+          RET     NZ
+          CALL    RND
+          CP      200
+          JR      NC,$-5
+          ADD     A,30
+          LD      (TURBRD+4),A
+          CALL    RND
+          CP      185
+          JR      NC,$-5
+          ADD     A,40
+          LD      (TURBRD+5),A
+          CALL    DSET
+TURBRD:   DEFW    TURBPT,TURBMV
+          DEFB    0,0,255,0,0,0
+          DEFB    13,4,00000000B
+          RET
+          ;
+TURBMV:   CALL    MOVE
+          DEFB    0,0,-16,0,3,0
+          ;
+TURBPT:   DEFB    9,0
+          DEFB     12,-24,  0
+          DEFB    -18,  6,  0
+          DEFB      6, 18,  0
+          DEFB      3,-36,  0
+          DEFB    -21, 12,-18
+          DEFB    -21, 12, 18
+          DEFB     27,-24,  0
+          DEFB      3, 24,-18
+          DEFB      3, 24, 18
+          DEFB     1,2,3,1,0,4,5,6,4,0
+          DEFB     7,8,9,7,0,0
+;
+; CURE ROUTINE
+;
+CURE:     LD      A,0
+          INC     A
+          LD      (CURE+1),A
+          AND     31
+          RET     NZ
+          CALL    RND
+          CP      205
+          JR      NC,$-5
+          ADD     A,25
+          LD      (CURERD+4),A
+          CALL    RND
+          CP      190
+          JR      NC,$-5
+          ADD     A,33
+          LD      (CURERD+5),A
+          CALL    DSET
+CURERD:   DEFW    CURPD1,CUREMV
+          DEFB    0,0,255,0,0,0
+          DEFB    9,3,00000000B
+          RET
+          ;
+CUREMV:   LD      A,(IX+1)
+          INC     (IX+1)
+          LD      HL,CURPD1
+          AND     2
+          JR      NZ,$+5
+          LD      HL,CURPD2
+          LD      (IX+4),H
+          LD      (IX+3),L
+          LD      A,(IX+9)
+          SUB     24
+          LD      (IX+9),A
+          RET
+          ;
+CURPD1:   DEFB    6,0
+          DEFB      0,-18,  0
+          DEFB      0, 18,  0
+          DEFB      0,  0,-22
+          DEFB    -22,  0,  0
+          DEFB      0,  0, 22
+          DEFB     22,  0,  0
+          DEFB    1,4,2,6,1,0,5,4,3,6,5,0
+          DEFB    1,3,2,5,1,0,0
+          ;
+CURPD2:   DEFB    6,0
+          DEFB      0,-28,  0
+          DEFB      0, 28,  0
+          DEFB      0,  0,-12
+          DEFB    -12,  0,  0
+          DEFB      0,  0, 12
+          DEFB     12,  0,  0
+          DEFB    1,4,2,6,1,0,5,4,3,6,5,0
+          DEFB    1,3,2,5,1,0,0
+;
+; TECHNOITE ROUTINE
+;
+TECHPT:   DEFB    6,0
+          DEFB    -23,-23,  3
+          DEFB      0, 18,  3
+          DEFB     18,  0,  3
+          DEFB    -23,-23, -3
+          DEFB      0, 18, -3
+          DEFB     18,  0, -3
+          DEFB    1,2,3,1,0,4,5,6,4,0
+          DEFB    1,4,0,2,5,0,3,6,0,0
+          ;
+TECHMV:   CALL    MOVE
+          DEFB    0,0,-26,0,0,3
+          ;
+TECHNO:   CALL    RND
+          CP      215
+          JR      NC,$-5
+          ADD     A,23
+          LD      (TECHRD+4),A
+          CALL    RND
+          CP      215
+          JR      NC,$-5
+          ADD     A,23
+          LD      (TECHRD+5),A
+          CALL    RND
+          LD      C,8
+          AND     15
+          JR      Z,CJ4
+          LD      C,7
+          CP      13
+          JR      NC,CJ4
+          LD      C,3
+          CP      9
+          JR      NC,CJ4
+          LD      C,10
+CJ4:      LD      A,C
+          LD      (TECHRD+10),A
+          CALL    DSET
+TECHRD:   DEFW    TECHPT,TECHMV
+          DEFB    0,0,255,0,0,0
+          DEFB    0,5,00000000B
+          RET
+          ;
+TUCH5:    LD      A,(IX+13)
+          LD      DE,400
+          CP      8
+          JR      Z,TJ5
+          LD      DE,200
+          CP      7
+          JR      Z,TJ5
+          LD      DE,100
+          CP      3
+          JR      Z,TJ5
+          LD      DE,50
+TJ5:      LD      HL,(SCORE)
+          ADD     HL,DE
+          JR      NC,$+5
+          LD      HL,65535
+          LD      (SCORE),HL
+          XOR     A
+          LD      (IX+0),A
+          LD      (IX+2),A
+          RET
+;
+; MINING PARTY
+;
+PARPD1:   DEFB    7,0
+          DEFB    -12,  0,-12
+          DEFB     -5,  0, 16
+          DEFB     20,  0, -2
+          DEFB      0,-30,  0
+          DEFB      0,-60,  0
+          DEFB     20,-52,  0
+          DEFB      0,-44,  0
+          DEFB    1,2,3,1,4,2,0,3,4,5,6,7,0,0
+          ;
+PARPD2:   DEFB    7,0
+          DEFB      0,-40,  0
+          DEFB     12,-40,  0
+          DEFB      0,-30,  0
+          DEFB    -12,-40,  0
+          DEFB      0,-20,  0
+          DEFB    -10,  0,  0
+          DEFB     10,  0,  0
+          DEFB    1,3,5,6,0,4,3,2,0,5,7,0,0
+          ;
+PARTY:    CALL    RND
+          CP      224
+          JR      NC,$-5
+          ADD     A,12
+          LD      (PARRD+4),A
+          CALL    RND
+          AND     7
+          LD      HL,PARPD1
+          LD      C,7
+          JR      Z,$+7
+          LD      HL,PARPD2
+          LD      C,6
+          LD      (PARRD+0),HL
+          LD      A,C
+          LD      (PARRD+11),A
+          CALL    DSET
+PARRD:    DEFW    PARPD1,PARMV
+          DEFB    0,255,255,0,0,0
+          DEFB    15,6,00000000B
+          RET
+          ;
+PARMV:    LD      A,(IX+9)
+          ADD     A,-24
+          JP      NC,MALEND
+          LD      (IX+9),A
+          RET
+          ;
+TUCH6:    LD      A,(IX+14)
+          LD      DE,250
+          CP      6
+          JR      Z,$+5
+          LD      DE,500
+          LD      HL,(SCORE)
+          ADD     HL,DE
+          JR      NC,$+5
+          LD      HL,65535
+          LD      (SCORE),HL
+          XOR     A
+          LD      (IX+0),A
+          LD      (IX+2),A
+          RET
+;
+; RUNDUM ROUTINE
+;
+RND:      PUSH    BC
+          LD      BC,0
+          LD      A,R
+          ADD     A,C
+          ADD     A,B
+          LD      C,B
+          LD      B,A
+          LD      (RND+2),BC
+          POP     BC
+          RET
+;
+; HOME POSITION RETURN
+;
+HOME:     LD      A,3
+          LD      (IX+1),A
+          LD      A,(IX+7)
+          CP      128
+          JR      Z,YPOS
+          JR      C,HJ1
+          SUB     16
+          LD      (IX+7),A
+          INC     (IX+10)
+          RET
+HJ1:      ADD     A,16
+          LD      (IX+7),A
+          DEC     (IX+10)
+          RET
+YPOS:     LD      A,2
+          LD      (IX+1),A
+          LD      A,(IX+8)
+          CP      128
+          JR      Z,ZPOS
+          JR      C,HJ2
+          SUB     4
+          LD      (IX+8),A
+          RET
+HJ2:      ADD     A,4
+          LD      (IX+8),A
+          RET
+ZPOS:     LD      A,1
+          LD      (IX+1),A
+          LD      A,(IX+9)
+          CP      16
+          JR      Z,HJ3
+          SUB     4
+          LD      (IX+9),A
+          RET
+HJ3:      XOR     A
+          LD      (IX+1),A
+          RET
+END:      EQU     $

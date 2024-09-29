@@ -1,0 +1,1132 @@
+CALSLT:   EQU     001CH
+GTSTCK:   EQU     00D5H
+GTTRIG:   EQU     00D8H
+NEG:      EQU     44EDH
+EXPTBL:   EQU     0FCC1H
+
+TOP2:     EQU     09F7H
+WRLIFE:   EQU     TOP2+0537H
+NEXT:     EQU     1450H
+          ORG     0100H
+;
+;---- SCREEN & COLOR SET ----
+;
+          LD      A,(EXPTBL)
+          LD      HL,0006H
+          CALL    000CH
+          LD      (RDVDP),A
+          LD      A,(EXPTBL)
+          LD      HL,0007H
+          CALL    000CH
+          LD      (RDVDP+1),A
+          LD      A,7
+          LD      (PLDAT),A
+          CALL    PALETE
+          ;
+          LD      A,15
+          LD      HL,0
+          LD      (0F3E9H),A
+          LD      (0F3EAH),HL
+          LD      A,(0FFE7H)
+          OR      00000010B
+          LD      (0FFE7H),A
+          LD      A,5
+          LD      IX,005FH
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          ;
+          DI
+          LD      BC,(RDVDP+1)
+          INC     C
+          LD      A,22
+          OUT     (C),A
+          LD      A,23+80H
+          OUT     (C),A
+          EI
+          ;
+          LD      (STACK),SP
+          JP      NEXT
+;
+;---- MAIN ROUTINE ----
+;
+MAIN:     PUSH    IX
+          PUSH    HL
+          PUSH    DE
+          PUSH    BC
+          ;
+MAINS:    PUSH    AF
+          JP      JPPOI
+          NOP
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          JP      C,RETURN
+          ;
+JPPOI:    CALL    CLS
+          LD      A,(SWHICH)
+          BIT     0,A
+          CALL    NZ,SCALE
+          ;
+          BIT     1,A
+          JR      Z,MA0
+          LD      IX,MASTER
+          CALL    MALTI
+          BIT     2,A
+          CALL    NZ,MALTI
+          ;
+MA0:      BIT     3,A
+          JR      Z,MA2
+          LD      HL,PORIDAT
+          LD      DE,16
+          LD      B,E
+          PUSH    AF
+MA1:      LD      A,(HL)
+          OR      A
+          JR      Z,$+8
+          PUSH    HL
+          POP     IX
+          CALL    MALTI
+          ADD     HL,DE
+          DJNZ    MA1
+          POP     AF
+          ;
+MA2:      BIT     6,A
+          CALL    NZ,WRLIFE
+          ;
+          PUSH    AF
+          LD      A,(VIJUAL)
+          XOR     1
+          LD      (VIJUAL),A
+          RRCA
+          RRCA
+          RRCA
+          OR      00011111B
+          LD      BC,(RDVDP+1)
+          INC     C
+          DI
+          OUT     (C),A
+          LD      A,80H+2
+          OUT     (C),A
+          EI
+          POP     AF
+          ;
+          BIT     4,A
+          JR      Z,MA3
+          LD      A,(LIFE)
+          OR      A
+          JR      NZ,MA3
+          LD      HL,(DEADRT)
+          JP      (HL)
+          ;
+MA3:      POP     AF
+          DEC     A
+          JP      NZ,MAINS
+          ;
+          POP     BC
+          POP     DE
+          POP     HL
+          POP     IX
+          RET
+          ;
+RETURN:   POP     AF
+          POP     HL
+          LD      A,15
+          LD      HL,0
+          LD      (0F3E9H),A
+          LD      (0F3EAH),HL
+          XOR     A
+          LD      IX,005FH
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          JP      103H
+;
+;---- PORY WRITE ----
+;
+MALTI:    PUSH    AF
+          PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          LD      (MALRET+1),SP
+          LD      HL,PARET
+          PUSH    HL
+          LD      H,(IX+6)
+          LD      L,(IX+5)
+          JP      (HL)
+PARET:    BIT     0,(IX+15)
+          JP      NZ,MALRET
+          ;
+          XOR     A
+          LD      (IX+2),A
+          LD      L,(IX+3)
+          LD      H,(IX+4)
+          LD      B,(HL)
+          INC     HL
+          LD      C,(HL)
+          INC     HL
+          LD      DE,HYOUJI
+MLOOP:    PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          PUSH    BC
+          PUSH    DE
+          LD      DE,WORK
+          CALL    TURN
+          POP     DE
+          POP     BC
+          LD      A,B
+          CP      C
+          LD      HL,WORK
+          CALL    NC,MONMAK
+          POP     HL
+          INC     HL
+          INC     HL
+          INC     HL
+          POP     DE
+          INC     DE
+          INC     DE
+          POP     BC
+          DJNZ    MLOOP
+          ;
+          PUSH    HL
+          CALL    TUCH
+          POP     BC
+SCREEN:   LD      A,(BC)
+          ADD     A,A
+          LD      HL,WORK+1
+          ADD     A,L
+          JR      NC,$+3
+          INC     H
+          LD      L,A
+          LD      D,(HL)
+          INC     HL
+          LD      E,(HL)
+SC1:      INC     BC
+          LD      A,(BC)
+          ADD     A,A
+          LD      HL,WORK+1
+          ADD     A,L
+          JR      NC,$+3
+          INC     H
+          LD      L,A
+          PUSH    DE
+          LD      D,(HL)
+          INC     HL
+          LD      E,(HL)
+          POP     HL
+          ;
+          LD      A,(IX+2)
+          OR      A
+          JR      NZ,BREAK
+          BIT     4,(IX+15)
+          JR      Z,SSET
+BREAK:    LD      A,R
+          AND     00011111B
+          RRA
+          JR      NC,$+4
+          NEG
+          ADD     A,D
+          LD      D,A
+          ADD     A,119
+          AND     00111111B
+          RRA
+          JR      NC,$+4
+          NEG
+          ADD     A,L
+          LD      L,A
+          ;
+SSET:     LD      (LIDAT),HL
+          LD      (LIDAT+2),DE
+          CALL    LINE
+          INC     BC
+          LD      A,(BC)
+          DEC     BC
+          OR      A
+          JR      NZ,SC1
+          INC     BC
+          INC     BC
+          LD      A,(BC)
+          OR      A
+          JR      NZ,SCREEN
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+          ;
+MALEND:   XOR     A
+          LD      (IX+0),A
+MALRET:   LD      SP,0
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+;
+; POINT TURN
+;
+TURN:     PUSH    DE
+          LD      B,(HL)
+          INC     HL
+          LD      C,(HL)
+          INC     HL
+          LD      A,(IX+10)
+          AND     00011111B
+          CALL    NZ,KAITEN
+          LD      D,B
+          LD      B,(HL)
+          LD      A,(IX+11)
+          AND     00011111B
+          CALL    NZ,KAITEN
+          LD      E,C
+          LD      C,B
+          LD      B,D
+          LD      A,(IX+12)
+          AND     00011111B
+          CALL    NZ,KAITEN
+          POP     HL
+          BIT     1,(IX+15)
+          JR      Z,$+8
+          SLA     B
+          SLA     C
+          SLA     E
+          BIT     2,(IX+15)
+          JR      Z,$+8
+          SRA     B
+          SRA     C
+          SRA     E
+          JP      SEARCH
+          ;
+KAITEN:   PUSH    DE
+          PUSH    HL
+          LD      HL,SINDAT
+          ADD     A,A
+          ADD     A,L
+          JR      NC,$+3
+          INC     H
+          LD      L,A
+          LD      D,(HL)
+          INC     HL
+          LD      E,(HL)
+          LD      A,D
+          LD      H,B
+          OR      A
+          CALL    NZ,TIMES
+          LD      L,A
+          LD      A,E
+          LD      H,C
+          OR      A
+          CALL    NZ,TIMES
+          LD      H,A
+          PUSH    HL
+          LD      A,D
+          LD      H,C
+          OR      A
+          CALL    NZ,TIMES
+          LD      L,A
+          LD      A,E
+          LD      H,B
+          OR      A
+          CALL    NZ,TIMES
+          SUB     L
+          LD      B,A
+          POP     HL
+          LD      A,H
+          ADD     A,L
+          LD      C,A
+          POP     HL
+          POP     DE
+          RET
+          ;
+TIMES:    INC     H
+          DEC     H
+          JR      NZ,$+4
+          XOR     A
+          RET
+          PUSH    HL
+          PUSH    BC
+          PUSH    DE
+          LD      D,0
+          LD      E,H
+          LD      HL,0
+          SLA     A   ;SIN<0
+          LD      B,A
+          JR      NC,$+5
+          LD      HL,NEG
+          LD      (NEGPAT),HL
+          LD      HL,0
+          LD      A,E
+          OR      A
+          JP      P,$+8
+          LD      HL,NEG
+          NEG
+          LD      (NEGPT2),HL
+          LD      E,A
+          LD      A,B
+          CP      0FEH  ;SIN=1
+          JR      NZ,$+5
+          LD      A,E
+          JR      NEGPAT
+          LD      HL,0
+          LD      B,8
+LOOP2:    RRA
+          JR      NC,$+3
+          ADD     HL,DE
+          SLA     E
+          RL      D
+          DJNZ    LOOP2
+          LD      A,H
+NEGPAT:   NOP
+          NOP
+NEGPT2:   NOP
+          NOP
+          POP     DE
+          POP     BC
+          POP     HL
+          RET
+SINDAT:
+DEFB        0,127, 25,126
+DEFB       49,119, 71,107
+DEFB       91, 91,107, 71
+DEFB      119, 49,126, 25
+DEFB      127,  0,126,153
+DEFB      119,177,107,199
+DEFB       91,219, 71,235
+DEFB       49,247, 25,254
+DEFB        0,255,153,254
+DEFB      177,247,199,235
+DEFB      219,219,235,199
+DEFB      247,177,254,153
+DEFB      255,  0,254, 25
+DEFB      247, 49,235, 71
+DEFB      219, 91,199,107
+DEFB      177,119,153,126
+;
+; SEARCH IN GAGE
+;
+SEARCH:   LD      D,B
+          LD      A,B
+          ADD     A,(IX+7)
+          EX      AF,AF'
+          RL      D
+          JR      NC,$+7
+          EX      AF,AF'
+          JR      NC,SERRET
+          JR      $+5
+          EX      AF,AF'
+          JR      C,SERRET
+          LD      (HL),A
+          INC     HL
+          LD      D,E
+          LD      A,E
+          ADD     A,(IX+8)
+          EX      AF,AF'
+          RL      D
+          JR      NC,$+7
+          EX      AF,AF'
+          JR      NC,SERRET
+          JR      $+5
+          EX      AF,AF'
+          JR      C,SERRET
+          LD      (HL),A
+          INC     HL
+          SRA     C
+          LD      D,C
+          LD      A,C
+          ADD     A,(IX+9)
+          EX      AF,AF'
+          RL      D
+          JR      NC,$+7
+          EX      AF,AF'
+          JR      NC,SERRET
+          JR      $+5
+          EX      AF,AF'
+          JR      C,SERRET
+          LD      (HL),A
+          BIT     3,(IX+15)
+          RET     NZ
+          ;
+          LD      DE,GAGE+5
+          EX      DE,HL
+          CP      (HL)
+          RET     NC
+          DEC     HL
+          CP      (HL)
+          RET     C
+          LD      A,(IX+2)
+          OR      A
+          RET     NZ
+          EX      DE,HL
+          DEC     DE
+          DEC     HL
+          LD      A,(DE)
+          CP      (HL)
+          RET     C
+          DEC     DE
+          LD      A,(DE)
+          CP      (HL)
+          RET     NC
+          DEC     DE
+          DEC     HL
+          LD      A,(DE)
+          CP      (HL)
+          RET     C
+          DEC     DE
+          LD      A,(DE)
+          CP      (HL)
+          RET     NC
+          LD      A,1
+          LD      (IX+2),A
+          RET
+          ;
+SERRET:   BIT     5,(IX+15)
+          JP      Z,MALEND
+          JP      MALRET
+;
+; TUCH ROUTINE
+;
+TUCH:     LD      H,0
+          LD      L,(IX+13)
+          LD      (LIDAT+4),HL
+          LD      A,(IX+2)
+          OR      A
+          RET     Z
+          ;
+          LD      HL,JPTUCH
+          LD      A,(IX+14)
+          AND     15
+          ADD     A,A
+          LD      E,A
+          LD      D,0
+          ADD     HL,DE
+          LD      E,(HL)
+          INC     HL
+          LD      D,(HL)
+          EX      DE,HL
+          JP      (HL)
+          ;
+JPTUCH:   DEFS    32
+;
+; MONITOR POINT
+;
+MONMAK:   LD      A,(HL)
+          LD      C,0
+          INC     HL
+          INC     HL
+          ADD     A,(HL)
+          RL      C
+          ADD     A,(HL)
+          JR      NC,$+3
+          INC     C
+          RR      C
+          RRA
+          RR      C
+          RRA
+          RR      C
+          LD      B,A
+          PUSH    DE
+          LD      D,0
+          LD      A,(HL)
+          ADD     A,64
+          RL      D
+          LD      E,A
+          CALL    WARIZU
+          POP     DE
+          LD      (DE),A
+          DEC     HL
+          INC     DE
+          LD      A,(HL)
+          LD      C,0
+          INC     HL
+          ADD     A,(HL)
+          RL      C
+          ADD     A,(HL)
+          JR      NC,$+3
+          INC     C
+          RR      C
+          RRA
+          RR      C
+          RRA
+          RR      C
+          LD      B,A
+          PUSH    DE
+          LD      D,0
+          LD      A,(HL)
+          ADD     A,64
+          RL      D
+          LD      E,A
+          CALL    WARIZU
+          POP     DE
+          LD      (DE),A
+          RET
+          ;
+WARIZU:   PUSH    HL
+          LD      H,0
+          LD      L,B
+          LD      B,8
+WALOOP:   RL      C
+          RL      L
+          RL      H
+          OR      A
+          SBC     HL,DE
+          JR      NC,$+4
+          ADD     HL,DE
+          SCF
+          CCF
+          RLA
+          DJNZ    WALOOP
+          POP     HL
+          RET
+;
+; LINE ROUTINE
+;
+LINE:     PUSH    AF
+          PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          LD      BC,(RDVDP)
+          INC     B
+          INC     C
+          LD      L,C
+          LD      C,B
+          LD      DE,028FH
+          DI
+          OUT     (C),D
+          OUT     (C),E
+          LD      DE,2491H
+          OUT     (C),D
+          OUT     (C),E
+          LD      H,C
+          LD      C,L
+WAITLI:   IN      A,(C)
+          AND     1
+          JR      NZ,WAITLI
+          LD      C,H
+          OUT     (C),A
+          LD      A,8FH
+          OUT     (C),A
+          INC     C
+          INC     C
+          ;
+          LD      HL,(LIDAT)
+          LD      DE,(LIDAT+2)
+          XOR     A
+          OUT     (C),H
+          OUT     (C),A
+          OUT     (C),L
+          LD      A,(VIJUAL)
+          XOR     1
+          OUT     (C),A
+          LD      B,0
+          LD      A,D
+          SUB     H
+          JR      NC,LINE1
+          NEG
+          SET     2,B
+LINE1:    LD      D,A
+          LD      A,E
+          SUB     L
+          JR      NC,LINE2
+          NEG
+          SET     3,B
+LINE2:    LD      E,A
+          CP      D
+          JR      C,LINE3
+          SET     0,B
+          LD      A,D
+          LD      D,E
+          LD      E,A
+LINE3:    XOR     A
+          OUT     (C),D
+          OUT     (C),A
+          OUT     (C),E
+          OUT     (C),A
+          LD      DE,(LIDAT+4)
+          OUT     (C),E
+          OUT     (C),B
+          LD      A,D
+          OR      01110000B
+          OUT     (C),A
+          EI
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+          ;
+LIDAT:    DEFB    0,0  ;X ,Y
+          DEFB    0,0  ;X',Y'
+          DEFB    0,0  ;COLOR
+;
+; CLS ROUTINE
+;
+CLS:      PUSH    AF
+          PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          LD      A,(VIJUAL)
+          XOR     1
+          LD      (CMDDAT+3),A
+          LD      BC,(RDVDP)
+          LD      DE,028FH
+          INC     B
+          INC     C
+          LD      L,C
+          LD      C,B
+          DI
+          OUT     (C),D
+          OUT     (C),E
+          LD      DE,2491H
+          OUT     (C),D
+          OUT     (C),E
+          INC     C
+          INC     C
+          LD      H,C
+          LD      C,L
+WAITCL:   IN      A,(C)
+          AND     1
+          JR      NZ,WAITCL
+          LD      C,H
+          LD      HL,CMDDAT
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          OUTI
+          DEC     C
+          DEC     C
+          OUT     (C),A
+          LD      A,8FH
+          OUT     (C),A
+          EI
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+          ;
+CMDDAT:   DEFW    0,22
+          DEFW    256,212
+          DEFB    0
+          DEFB    00000000B
+          DEFB    11000000B
+;
+; SCALE SUB
+;
+SCALE:    PUSH    AF
+          PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          LD      A,(SCOLOR)
+          LD      L,A
+          LD      H,0
+          LD      (LIDAT+4),HL
+          LD      L,154
+          LD      (LIDAT),HL
+          LD      H,255
+          LD      (LIDAT+2),HL
+          CALL    LINE
+          LD      A,(SCOLOR+1)
+          AND     3
+          LD      H,A
+          LD      A,(POINTA)
+          ADD     A,H
+          AND     7
+          LD      (POINTA),A
+          LD      HL,POINTA+1
+          ADD     A,L
+          JR      NC,$+3
+          INC     H
+          LD      L,A
+          LD      B,4
+SLOOP:    LD      A,(HL)
+          LD      E,A
+          LD      D,0
+          LD      (LIDAT),DE
+          LD      D,255
+          LD      (LIDAT+2),DE
+          CALL    LINE
+          LD      DE,8
+          ADD     HL,DE
+          DJNZ    SLOOP
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+POINTA:
+DEFB      0
+DEFB      154,154,155,156
+DEFB      157,157,158,159
+DEFB      160,161,162,163
+DEFB      165,166,168,169
+DEFB      171,173,175,177
+DEFB      180,182,185,189
+DEFB      193,197,202,208
+DEFB      214,222,232,243
+;
+; KEY ROUTINE
+;
+KEY:      PUSH    IX
+          XOR     A
+          LD      IX,GTSTCK
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          OR      A
+          JR      NZ,JRKE
+          INC     A
+          LD      IX,GTSTCK
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+JRKE:     POP     IX
+          ;
+          OR      A
+          JR      Z,TRIG
+          DEC     A
+          LD      B,A
+          LD      D,(IX+7)
+          LD      E,(IX+8)
+          AND     3
+          JR      Z,DOWN
+          BIT     2,B
+          LD      A,D
+          JR      NZ,LEFT
+          ADD     A,16
+          CP      225
+          JR      NC,DOWN
+          LD      D,A
+          DEC     (IX+10)
+          JR      DOWN
+LEFT:     SUB     16
+          CP      32
+          JR      C,DOWN
+          LD      D,A
+          INC     (IX+10)
+DOWN:     LD      A,B
+          ADD     A,2
+          AND     7
+          LD      B,A
+          AND     3
+          JR      Z,SET
+          BIT     2,B
+          LD      A,E
+          JR      NZ,DW
+          ADD     A,16
+          CP      225
+          JR      NC,SET
+          LD      E,A
+          JR      SET
+DW:       SUB     16
+          CP      32
+          JR      C,SET
+          LD      E,A
+          ;
+SET:      LD      (IX+7),D
+          LD      (IX+8),E
+          ;
+TRIG:     PUSH    IX
+          XOR     A
+          LD      IX,GTTRIG
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          INC     A
+          JR      Z,JRTR
+          LD      IX,GTTRIG
+          LD      IY,(EXPTBL-1)
+          CALL    CALSLT
+          INC     A
+JRTR:     POP     IX
+          ;
+          JR      Z,GO
+          LD      A,-8
+          ADD     A,(IX+9)
+          CP      16
+          JR      C,SET2+3
+          JR      SET2
+GO:       LD      A,16
+          ADD     A,(IX+9)
+          CP      129
+          JR      NC,SET2+3
+SET2:     LD      (IX+9),A
+          ;
+          CALL    SETGAG
+          RET
+;
+; SET GAGE
+;
+SETGAG:   LD      IY,GAGE
+          LD      A,(IX+7)
+          ADD     A,24
+          LD      (IY+1),A
+          SUB     48
+          LD      (IY+0),A
+          LD      A,(IX+8)
+          ADD     A,20
+          LD      (IY+3),A
+          SUB     38
+          LD      (IY+2),A
+          LD      A,(IX+9)
+          ADD     A,16
+          LD      (IY+5),A
+          SUB     32
+          LD      (IY+4),A
+          RET
+;
+; MOVE SUB
+;
+MOVE:     PUSH    IX
+          POP     HL
+          LD      DE,7
+          ADD     HL,DE
+          POP     DE
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          INC     DE
+          INC     HL
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          INC     DE
+          INC     HL
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          INC     DE
+          INC     HL
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          INC     DE
+          INC     HL
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          INC     DE
+          INC     HL
+          LD      A,(DE)
+          ADD     A,(HL)
+          LD      (HL),A
+          RET
+          ;
+RTURN:    EX      (SP),HL
+          PUSH    DE
+          PUSH    BC
+          PUSH    AF
+          PUSH    HL
+          LD      A,(IX+7)
+          SUB     (HL)
+          LD      B,A
+          INC     HL
+          LD      A,(IX+8)
+          SUB     (HL)
+          LD      C,A
+          INC     HL
+          LD      A,(IX+9)
+          SUB     (HL)
+          LD      D,A
+          INC     HL
+          LD      A,(HL)
+          OR      A
+          CALL    NZ,KAITEN
+          LD      E,B
+          LD      B,D
+          INC     HL
+          LD      A,(HL)
+          OR      A
+          CALL    NZ,KAITEN
+          LD      D,C
+          LD      C,B
+          LD      B,E
+          INC     HL
+          LD      A,(HL)
+          OR      A
+          CALL    NZ,KAITEN
+          POP     HL
+          LD      A,B
+          ADD     A,(HL)
+          LD      (IX+7),A
+          INC     HL
+          LD      A,D
+          ADD     A,(HL)
+          LD      (IX+8),A
+          INC     HL
+          LD      A,C
+          ADD     A,(HL)
+          LD      (IX+9),A
+          INC     HL
+          INC     HL
+          INC     HL
+          INC     HL
+          POP     AF
+          POP     BC
+          POP     DE
+          EX      (SP),HL
+          RET
+;
+; DATA SET
+;
+DSET:     EX      (SP),HL
+          PUSH    DE
+          PUSH    BC
+          PUSH    AF
+          PUSH    HL
+          LD      HL,PORIDAT
+          LD      DE,16
+          LD      B,E
+DSLOOP:   LD      A,(HL)
+          OR      A
+          JR      Z,DSSET
+          ADD     HL,DE
+          DJNZ    DSLOOP
+          POP     HL
+          LD      DE,13
+          ADD     HL,DE
+          JR      DSRET
+          ;
+DSSET:    POP     DE
+          LD      (HL),1
+          INC     HL
+          LD      (HL),0
+          INC     HL
+          LD      (HL),0
+          INC     HL
+          EX      DE,HL
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+          LDI
+DSRET:    POP     AF
+          POP     BC
+          POP     DE
+          EX      (SP),HL
+          RET
+          ;
+CLSPRI:   XOR     A
+          LD      HL,PORIDAT
+          LD      DE,PORIDAT+1
+          LD      BC,255
+          LD      (HL),A
+          LDIR
+          RET
+;
+; PALETTE SET
+;
+PALETE:   PUSH    AF
+          PUSH    BC
+          PUSH    DE
+          PUSH    HL
+          LD      BC,(RDVDP+1)
+          INC     C
+          DI
+          XOR     A
+          OUT     (C),A
+          LD      A,80H+16
+          OUT     (C),A
+          INC     C
+          LD      B,16
+          LD      HL,PLDAT
+          LD      E,(HL)
+PLLOOP:   INC     HL
+          LD      A,(HL)
+          SUB     E
+          JR      NC,$+3
+          XOR     A
+          RLCA
+          RLCA
+          RLCA
+          RLCA
+          LD      D,A
+          INC     HL
+          LD      A,(HL)
+          SUB     E
+          JR      NC,$+3
+          XOR     A
+          OR      D
+          OUT     (C),A
+          INC     HL
+          LD      A,(HL)
+          SUB     E
+          JR      NC,$+3
+          XOR     A
+          OUT     (C),A
+          DJNZ    PLLOOP
+          EI
+          POP     HL
+          POP     DE
+          POP     BC
+          POP     AF
+          RET
+          ;
+PLDAT:    DEFB    7
+          DEFB    0,0,0,0,0,0
+          DEFB    1,1,6,3,3,7
+          DEFB    1,7,1,2,7,3
+          DEFB    5,1,1,2,7,6
+          DEFB    7,1,1,7,3,3
+          DEFB    6,1,6,6,3,6
+          DEFB    1,1,4,6,5,2
+          DEFB    5,5,5,7,7,7
+          ;
+UNFADE:   CALL    DSET
+          DEFW    0,UNFAD
+          DEFW    0,0,0,0
+          DEFB    00000001B
+          RET
+UNFAD:    LD      A,(IX+1)
+          INC     (IX+1)
+          CP      8
+          JP      Z,MALEND
+          XOR     7
+          LD      (PLDAT),A
+          CALL    PALETE
+          RET
+          ;
+FADE:     CALL    DSET
+          DEFW    0,FAD
+          DEFW    0,0,0,0
+          DEFB    00000001B
+          RET
+FAD:      LD      A,(IX+1)
+          INC     (IX+1)
+          CP      8
+          JP      Z,MALEND
+          LD      (PLDAT),A
+          CALL    PALETE
+          RET
+;
+;---- WORK AREA ----
+;
+RDVDP:    DEFS    2
+WORK:     DEFS    3
+HYOUJI:   DEFS    120
+VIJUAL:   DEFB    0
+STACK:    DEFW    0
+;
+SCROLL:   DEFB    0,0
+SCOLOR:   DEFB    3,1
+SWHICH:   DEFB    00001001B
+CONTRT:   DEFW    00
+DEADRT:   DEFW    00
+LIFE:     DEFB    16
+STOCK:    DEFB    3
+SCORE:    DEFW    00
+HSCORE:   DEFW    00
+GAGE:     DEFB    0,0,0,0,0,0
+MASTER:   DEFS    16
+PORIDAT:  DEFS    256
+END:      EQU     $
+
